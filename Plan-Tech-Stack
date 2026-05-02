@@ -1,0 +1,71 @@
+Plan: Tech Stack — Sistema de Tickets UTP (Java + Supabase)
+Contexto
+Sistema web para estudiantes de la UTP que permite:
+
+Registro e inicio de sesión con 2 roles: Local (vendedor de comida) y Cliente (estudiante)
+Generación de tickets para recoger comida y reducir filas
+Requerimientos fijos: Java en backend, Supabase como base de datos
+Tech Stack Recomendado
+Backend (Java)
+Tecnología	Versión	Propósito
+Spring Boot	3.3.x	Framework principal, REST API
+Spring Security	6.x	Autenticación y autorización
+Spring Data JPA	3.x	ORM para acceso a base de datos
+JWT (jjwt)	0.12.x	Tokens de acceso/refresh stateless
+PostgreSQL JDBC	42.x	Conector con Supabase (PostgreSQL)
+MapStruct	1.5.x	Mapeo DTO ↔ Entidad
+Lombok	1.18.x	Reducción de boilerplate
+SpringDoc OpenAPI	2.x	Documentación Swagger automática
+Maven	3.9.x	Gestión de dependencias y build
+Estructura de módulos:
+
+src/
+  auth/         → registro, login, JWT
+  users/        → gestión de usuarios (Local / Cliente)
+  tickets/      → creación, listado, validación de tickets
+  common/       → excepciones, respuestas, utils
+Seguridad:
+
+Supabase como PostgreSQL (no se usa Supabase Auth — Spring Security maneja JWT)
+Roles: ROLE_LOCAL, ROLE_CLIENTE
+Endpoints protegidos por rol con @PreAuthorize
+Base de Datos (Supabase)
+Elemento	Detalle
+Supabase	PostgreSQL gestionado en la nube
+Row Level Security (RLS)	Políticas por rol para aislar datos
+Tablas principales	users, locals, tickets, food_items
+Migraciones	SQL versionado subido vía Supabase MCP o CLI
+Frontend (Web)
+Tecnología	Versión	Propósito
+React	18.x	Framework UI principal
+TypeScript	5.x	Tipado estático
+Vite	5.x	Bundler rápido
+TailwindCSS	3.x	Estilos utilitarios
+shadcn/ui	latest	Componentes accesibles y modernos
+React Router	6.x	Navegación y rutas protegidas
+Axios	1.x	Cliente HTTP hacia el backend Java
+TanStack Query	5.x	Cache y sincronización de datos del servidor
+React Hook Form + Zod	latest	Formularios con validación
+Arquitectura General
+[Browser] 
+    ↓ HTTPS
+[React + TypeScript (Vite)]
+    ↓ REST / JSON
+[Spring Boot API]
+    ↓ JDBC / SQL
+[Supabase PostgreSQL]
+Flujo Principal
+Estudiante se registra como Cliente → Spring Boot crea usuario + JWT
+Vendedor se registra como Local → Spring Boot crea perfil de local
+Cliente selecciona comida y genera ticket con código QR o número
+Local escanea/valida ticket → marca como retirado
+Panel del Local muestra cola en tiempo real (polling o SSE)
+Verificación (Testing)
+Backend: JUnit 5 + Mockito (unit), Testcontainers + PostgreSQL (integración)
+Frontend: Vitest + React Testing Library
+API: Swagger UI en /swagger-ui.html
+Manual: Postman collection para flujo registro → login → ticket
+Archivos a crear (nuevo proyecto)
+backend/ → proyecto Maven Spring Boot
+frontend/ → proyecto Vite React TypeScript
+supabase/migrations/ → scripts SQL iniciales
