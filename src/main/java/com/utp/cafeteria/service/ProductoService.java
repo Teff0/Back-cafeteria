@@ -76,4 +76,12 @@ public class ProductoService {
         }
         productoRepository.deleteById(id);
     }
+
+    @Transactional
+    public ProductoResponse cambiarDisponibilidad(UUID id, Boolean disponible) {
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto", "id", id));
+        producto.setDisponible(disponible);
+        return ProductoResponse.from(productoRepository.save(producto));
+    }
 }
