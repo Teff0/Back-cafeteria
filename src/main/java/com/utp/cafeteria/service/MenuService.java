@@ -63,4 +63,32 @@ public class MenuService {
         
         return MenuResponse.from(menu);
     }
+
+    @Transactional
+    public MenuResponse crearMenu(Menu menu) {
+        menu.setActivo(true);
+        return MenuResponse.from(menuRepository.save(menu));
+    }
+
+    @Transactional
+    public MenuResponse actualizarMenu(UUID id, Menu menuActualizado) {
+        Menu menu = menuRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Menú", "id", id));
+        
+        menu.setNombre(menuActualizado.getNombre());
+        menu.setDescripcion(menuActualizado.getDescripcion());
+        menu.setPrecio(menuActualizado.getPrecio());
+        menu.setFecha(menuActualizado.getFecha());
+        menu.setHorario(menuActualizado.getHorario());
+        
+        return MenuResponse.from(menuRepository.save(menu));
+    }
+
+    @Transactional
+    public void eliminarMenu(UUID id) {
+        Menu menu = menuRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Menú", "id", id));
+        menu.setActivo(false);
+        menuRepository.save(menu);
+    }
 }

@@ -1,7 +1,7 @@
 package com.utp.cafeteria.security;
 
-import com.utp.cafeteria.config.SupabaseConfig;
-import com.utp.cafeteria.service.SupabaseAuthService;
+import com.utp.cafeteria.entity.Usuario;
+import com.utp.cafeteria.repository.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,8 +23,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SupabaseAuthFilter extends OncePerRequestFilter {
 
-    private final SupabaseAuthService supabaseAuthService;
-    private final SupabaseConfig supabaseConfig;
+    private final JwtUtil jwtUtil;
+    private final CustomUserDetailsService customUserDetailsService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -42,22 +42,14 @@ public class SupabaseAuthFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
 
         try {
-            Map<String, Object> user = supabaseAuthService.getUser(token);
-            
-            if (user != null && user.get("id") != null) {
-                String email = (String) user.get("email");
-                @SuppressWarnings("unchecked")
-                Map<String, Object> userMetadata = (Map<String, Object>) user.get("user_metadata");
-                String rol = userMetadata != null && userMetadata.containsKey("rol") 
-                    ? (String) userMetadata.get("rol") 
-                    : "ESTUDIANTE";
+            if (jwtUtil.isTokenValid(token)) {
+                String email = jwtUtil.extractUsername(token);
+                String rol = jwtUtil.extractClaim(token, claims -> claims.get("role", String.class));
+
+                UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
 
                 List<SimpleGrantedAuthority> authorities = List.of(
                     new SimpleGrantedAuthority("ROLE_" + rol)
-                );
-
-                UserDetails userDetails = new org.springframework.security.core.userdetails.User(
-                    email, "", authorities
                 );
 
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
