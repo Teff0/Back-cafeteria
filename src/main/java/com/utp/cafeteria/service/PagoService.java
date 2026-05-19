@@ -1,7 +1,9 @@
 package com.utp.cafeteria.service;
 
-import com.utp.cafeteria.dto.*;
-import com.utp.cafeteria.entity.*;
+import com.utp.cafeteria.dto.PagoRequest;
+import com.utp.cafeteria.dto.PagoResponse;
+import com.utp.cafeteria.entity.Pago;
+import com.utp.cafeteria.entity.Pedido;
 import com.utp.cafeteria.exception.*;
 import com.utp.cafeteria.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -36,11 +37,17 @@ public class PagoService {
             throw new ConflictException("Ya existe un pago para este pedido");
         }
 
+        if (request.getMonto().compareTo(pedido.getTotal()) != 0) {
+            throw new BadRequestException(
+                    "El monto enviado (" + request.getMonto() + ") no coincide con el total del pedido (" + pedido.getTotal() + ")"
+            );
+        }
+
         Pago.MetodoPago metodo;
         try {
             metodo = Pago.MetodoPago.valueOf(request.getMetodoPago().toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Método de pago inválido");
+            throw new BadRequestException("Metodo de pago invalido: " + request.getMetodoPago());
         }
 
         Pago pago = Pago.builder()
@@ -53,7 +60,6 @@ public class PagoService {
                 .build();
 
         pagoRepository.save(pago);
-
         pedido.setEstado(Pedido.Estado.PAGADO);
         pedidoRepository.save(pedido);
 

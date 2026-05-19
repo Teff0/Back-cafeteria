@@ -1,11 +1,8 @@
 # Auditoría — Back-cafeteria
 
 > Sistema de Tickets UTP (Spring Boot 4 + Java 21 + Supabase PostgreSQL)
-> Fecha de auditoría: 2026-05-19 · Rama: `dev` · Commit base: `e5c6825`
-
-## Contexto
-
-`Back-cafeteria` es un backend Java/Spring Boot para un **Sistema de Tickets de Cafetería UTP**: los estudiantes seleccionan comida, generan un pedido y un código (QR/número) para retirarlo, reduciendo filas. El proyecto está en rama `dev`, sin README y sin tests. Este documento es un análisis **read-only** del estado actual: stack, dominio, riesgos y desviaciones respecto al [Plan-Tech-Stack](Plan-Tech-Stack) original.
+> Fecha de auditoría: 2026-05-19 · Rama: `feature/auditoria` · Commit base: `e5c6825`
+> Última actualización: 2026-05-19 — se aplicaron fixes de seguridad, compilación y lógica de negocio.
 
 ---
 
@@ -14,7 +11,7 @@
 | Capa | Tecnología | Notas |
 |---|---|---|
 | Lenguaje | Java 21 | `<java.version>21</java.version>` |
-| Framework | **Spring Boot 4.0.5** | El plan decía 3.3.x → **fue actualizado a 4.x** |
+| Framework | **Spring Boot 4.0.5** | El plan decía 3.3.x → fue actualizado a 4.x |
 | Build | Maven (wrapper incluido `mvnw`) | `tickets-backend` v0.0.1-SNAPSHOT, groupId `com.utp` |
 | Web | `spring-boot-starter-webmvc` + `webflux` (cliente) | En SB 4.x el starter cambió de `web` a `webmvc` |
 | Persistencia | Spring Data JPA + PostgreSQL JDBC | `ddl-auto=none` (schema gestionado por SQL) |
@@ -38,7 +35,7 @@ com.utp.cafeteria
 ├── service/       Auth, Cart, Menu, Pedido, Pago, Producto, Report, WebSocketNotification
 ├── entity/        Usuario, Producto, Menu, CarritoItem, Pedido, ItemPedido, Pago
 ├── repository/    7 interfaces JpaRepository (una por entidad)
-├── dto/           13 DTOs (Request/Response separados)
+├── dto/           15 DTOs — 13 originales + MenuRequest + ProductoRequest (añadidos)
 ├── security/      JwtUtil, CustomUserDetailsService, SupabaseAuthFilter
 └── exception/     5 excepciones + GlobalExceptionHandler + ErrorResponse
 ```
@@ -46,29 +43,29 @@ com.utp.cafeteria
 ### Modelo de dominio
 
 - **Usuario** — codigo, email, password (BCrypt), rol enum (USUARIO/CAJA/ADMIN), activo
-- **Producto** — nombre, precio, categoría enum, disponible, stock, imagenUrl
+- **Producto** — nombre, precio (`BigDecimal`), categoría enum, disponible, stock, imagenUrl
 - **Menu** — fecha + horario (DESAYUNO/ALMUERZO/CENA), `@ManyToMany` con Producto
 - **Pedido** — usuario, menu, estado (PENDIENTE→PAGADO→EN_PREPARACION→LISTO→ENTREGADO/CANCELADO), total, hora programada, `@OneToMany` ItemPedido
-- **ItemPedido** — pedido, producto, cantidad, precioUnitario, subtotal
-- **Pago** — `@OneToOne` Pedido, monto, método (EFECTIVO/TARJETA/YAPE/PLIN), estado, codigoTransaccion
+- **ItemPedido** — pedido, producto, cantidad, precioUnitario (`BigDecimal`), subtotal (`BigDecimal`)
+- **Pago** — `@OneToOne` Pedido, monto (`BigDecimal`), método (EFECTIVO/TARJETA/YAPE/PLIN), estado, codigoTransaccion
 - **CarritoItem** — usuario, producto, cantidad (carrito persistido en BD)
 
-### Endpoints REST (resumen por recurso)
+### Endpoints REST
 
 | Recurso | Rutas | Notas |
 |---|---|---|
 | `/api/auth` | POST login/logout/refresh | Tokens JWT stateless |
-| `/api/products` | GET público, POST/PUT/DELETE/PATCH (ADMIN) | PATCH `/{id}/availability` |
-| `/api/categories` | GET público, CRUD (ADMIN) | En realidad gestiona **menús**, no categorías |
+| `/api/products` | GET público, POST/PUT/DELETE/PATCH (ADMIN) | Body: `ProductoRequest` (DTO) |
+| `/api/categories` | GET público, CRUD (ADMIN) | Gestiona menús; body: `MenuRequest` (DTO) |
 | `/api/orders` | CRUD según rol, PATCH `/status` y `/cancel` | Lógica por rol (ADMIN, CAJA, USUARIO) |
-| `/api/cart` | GET/POST items/PUT items/{id}/DELETE | Carrito persistente por usuario |
-| `/api/payments` | POST `/initiate`, GET `/{orderId}/status`, POST `/webhook` | Webhook **público y vacío** |
-| `/api/reports` | GET `/sales`, `/top-products` (ADMIN) | Reportes simples |
+| `/api/cart` | GET/POST items/PUT items/{id}/DELETE | Solo USUARIO; verifica stock |
+| `/api/payments` | POST `/initiate`, GET `/{orderId}/status`, POST `/webhook` | Valida monto == total pedido |
+| `/api/reports` | GET `/sales`, `/top-products` (ADMIN) | Query por rango de fechas |
 
-### Seguridad
+### Seguridad aplicada
 
 - `STATELESS`, `@PreAuthorize` por rol, BCrypt
-- Filtro `SupabaseAuthFilter` (mal nombrado — en realidad valida JWT propio, no JWT de Supabase)
+- Filtro `SupabaseAuthFilter` (nombre incorrecto — valida JWT propio, no JWT de Supabase)
 - Rutas públicas: `/api/auth/**`, `GET /api/products`, `GET /api/categories`, `/api/payments/webhook`
 
 ---
@@ -81,82 +78,116 @@ Carpeta [migrations/](migrations/) con 3 archivos convención Flyway:
 - `V2__initial_data.sql` — seed
 - `V3__add_codigo_and_password.sql` — alter table
 
-**Problema:** el `pom.xml` **NO incluye Flyway ni Liquibase**, y `spring.jpa.hibernate.ddl-auto=none`. Las migraciones se deben aplicar manualmente (Supabase Studio / CLI) — no hay automatización en arranque.
+**Pendiente:** el `pom.xml` **no incluye Flyway ni Liquibase**, y `spring.jpa.hibernate.ddl-auto=none`. Las migraciones se aplican manualmente (Supabase Studio / CLI).
 
 ---
 
-## 4. Hallazgos críticos (riesgos)
+## 4. Hallazgos de seguridad
 
-### 🔴 Seguridad — acción inmediata recomendada
+### ✅ Aplicados
 
-1. **`.env` está commiteado en git** (`git ls-files .env` → encontrado) con credenciales reales de Supabase, JWT secret y password de BD. Aunque rotes credenciales, el historial las conserva.
-   - [.gitignore](.gitignore) no incluye `.env`
-2. **`application.properties` tiene credenciales como valores por defecto** en claro: host Supabase real (`dbnhyyrnnqoppwqnedvrgg.supabase.co`), `password=contraseña123`, JWT secret base64, anon/service keys. Esto neutraliza la protección de `.env` aunque lo borraras.
-3. **CORS abierto a `*`** (`cors.allowed-origins=*`) sin restricción por entorno.
-4. **Webhook de pagos público y sin verificación de firma** ([PagoController](src/main/java/com/utp/cafeteria/controller/PagoController.java) líneas 41-42 reportadas vacías).
-5. **Logging `DEBUG` en Spring Security** — filtraría tokens y headers sensibles en logs de producción.
-
-### 🟡 Desviaciones del Plan-Tech-Stack
-
-| Plan | Real | Impacto |
+| # | Hallazgo | Fix aplicado |
 |---|---|---|
-| Spring Boot 3.3.x | 4.0.5 | Starters renombrados (`web`→`webmvc`); algunos artefactos `*-test` declarados son inusuales |
-| Roles `ROLE_LOCAL` / `ROLE_CLIENTE` | `USUARIO` / `CAJA` / `ADMIN` | El plan no contemplaba CAJA — bien para el negocio, pero desalineado |
-| MapStruct | Mapeo manual `mapToResponse()` en servicios | Boilerplate creciente |
-| SpringDoc OpenAPI (Swagger) | Ausente | No hay documentación viva de la API |
-| Testcontainers + JUnit | Sin tests | Riesgo alto al evolucionar |
-| Estructura por feature (`auth/`, `tickets/`...) | Estructura por capa | Decisión válida pero diferente al plan |
+| 1 | `.env` commiteado en git con credenciales reales | `git rm --cached .env`; `.env` añadido al `.gitignore` |
+| 2 | `application.properties` con defaults sensibles hardcodeados (host Supabase, password, JWT secret, API keys) | Eliminados todos los defaults sensibles — falla en arranque si falta la env var |
+| 3 | `.env.example` contenía las mismas keys reales que `.env` | Reemplazado por template con placeholders |
+| 4 | CORS abierto a `*` sin restricción por entorno | `CORSConfig` lee `CORS_ALLOWED_ORIGINS` (env var); lanza `IllegalStateException` si se intenta `*` |
+| 5 | Logging `DEBUG` en Spring Security | Bajado a `INFO`; parametrizable con `LOG_LEVEL_SECURITY` en dev |
 
-### 🟡 Calidad
+### ⚠️ Pendientes (acción manual requerida)
 
-- **0 tests** en el proyecto pese a starters de test declarados.
-- **Sin README** ni documentación de arranque local.
-- **Hibernate `ddl-auto=none` + sin Flyway** → cualquier nuevo entorno requiere correr SQL a mano.
-- **CarritoItem en BD** convierte una operación de alta frecuencia (agregar al carrito) en escritura a Supabase — revisar si justifica un carrito en cliente o cache.
-- **Webhook vacío** y mapeos parciales.
+| # | Hallazgo | Acción requerida |
+|---|---|---|
+| 6 | **Historial git contiene credenciales** — aunque `.env` fue removido del index, el historial conserva los valores expuestos | Rotar TODAS las credenciales en Supabase: anon/service keys, DB password, JWT secret |
+| 7 | **Webhook de pagos sin verificación de firma** — `POST /api/payments/webhook` es público y no valida el payload | Implementar verificación HMAC con el secret del proveedor de pagos |
 
 ---
 
-## 5. Lo que sí está bien
+## 5. Bugs corregidos
+
+### 5.1 Bugs de compilación (el proyecto no arrancaba)
+
+| Archivo | Bug | Fix |
+|---|---|---|
+| [CartItemResponse.java](src/main/java/com/utp/cafeteria/dto/CartItemResponse.java) | `precioUnitario` y `subtotal` como `Double`; `Producto.precio` es `BigDecimal` | Cambiado a `BigDecimal` |
+| [CartResponse.java](src/main/java/com/utp/cafeteria/dto/CartResponse.java) | `total` como `Double` | Cambiado a `BigDecimal` |
+| [CartService.java](src/main/java/com/utp/cafeteria/service/CartService.java) | `BigDecimal * Integer` directo (operador `*` no existe en `BigDecimal`) | `precio.multiply(BigDecimal.valueOf(cantidad))` |
+| [ReportService.java](src/main/java/com/utp/cafeteria/service/ReportService.java) | `mapToDouble` con `BigDecimal` sin conversión explícita | `.doubleValue()` en todos los puntos de extracción |
+| [ReportService.java](src/main/java/com/utp/cafeteria/service/ReportService.java) | `computeIfAbsent(key, () -> ...)` — lambda sin parámetro (firma incorrecta) | `computeIfAbsent(key, k -> ...)` |
+| [MenuService.java](src/main/java/com/utp/cafeteria/service/MenuService.java) | `actualizarMenu` llamaba `getNombre()`, `getDescripcion()`, `getPrecio()` en `Menu` — campos que no existen en la entidad | Eliminadas; `actualizarMenu` ahora solo modifica `fecha`, `horario` y `productos` |
+
+### 5.2 Bugs de lógica de negocio
+
+| Archivo | Bug | Fix |
+|---|---|---|
+| [PedidoService.java](src/main/java/com/utp/cafeteria/service/PedidoService.java) | `cancelarPedido` no devolvía el stock de los productos al cancelar un pedido | Itera `pedido.getItems()` y restaura `producto.stock + item.cantidad` antes de cancelar |
+| [PedidoService.java](src/main/java/com/utp/cafeteria/service/PedidoService.java) | `cambiarEstado` aceptaba cualquier transición arbitraria (incluidas retrogradas) | Mapa de transiciones válidas: `PAGADO→{EN_PREPARACION,CANCELADO}`, `EN_PREPARACION→{LISTO}`, `LISTO→{ENTREGADO}` |
+| [PagoService.java](src/main/java/com/utp/cafeteria/service/PagoService.java) | El monto enviado en el pago no se validaba contra el total del pedido | `request.getMonto().compareTo(pedido.getTotal()) != 0` → 400 Bad Request |
+| [CartService.java](src/main/java/com/utp/cafeteria/service/CartService.java) | `agregarItem` no verificaba stock disponible (solo verificaba `disponible=true`) | Validación `producto.getStock() >= cantidad` antes de insertar o acumular |
+| [PedidoRequest.java](src/main/java/com/utp/cafeteria/dto/PedidoRequest.java) | `@NotBlank` en campo `LocalTime horaProgramada` — anotación solo aplica a `String` | Cambiado a `@NotNull` |
+
+---
+
+## 6. Mejoras de calidad aplicadas
+
+| Área | Cambio |
+|---|---|
+| **DTOs** | Creados [MenuRequest.java](src/main/java/com/utp/cafeteria/dto/MenuRequest.java) y [ProductoRequest.java](src/main/java/com/utp/cafeteria/dto/ProductoRequest.java). Los controllers ya no reciben entidades JPA directamente como `@RequestBody` (elimina riesgo de mass-assignment) |
+| **MenuService** | `crearMenu` valida unicidad de `fecha + horario`; `actualizarMenu` acepta `Set<UUID> productoIds` para reasignar productos al menú |
+| **ProductoService** | `crear` respeta el campo `stock` del request (default 100 si se omite); antes ignoraba el valor siempre |
+| **PedidoService** | Eliminado `mapToResponseAdmin` (duplicado exacto de `mapToResponse`); consolidado en un solo método |
+| **PedidoRepository** | Nueva query `findByFechaRangoYEstado(LocalDateTime, LocalDateTime)` con filtro de fechas y exclusión de CANCELADOS — reemplaza el `findAll()` + filtro en Java que tenía `ReportService` |
+| **Validación** | `@Valid` añadido en todos los endpoints CRUD que reciben request body |
+
+---
+
+## 7. Lo que sí estaba bien (sin cambios)
 
 - Arquitectura en capas clara y consistente.
-- Excepciones de dominio con `GlobalExceptionHandler` y `ErrorResponse` unificado.
+- `GlobalExceptionHandler` con `ErrorResponse` unificado.
 - Roles bien modelados con `@PreAuthorize`.
-- Separación Request/Response en DTOs.
-- WebSocket pensado para notificar cambios de estado en cola (alineado con el caso de uso "fila").
-- Estados de pedido bien definidos (máquina de estados implícita).
+- `PedidoService.crearPedido` con validación de stock y descuento correcto.
+- `PagoService` — flujo de pago, generación de código de transacción.
+- WebSocket para notificación de cambios de estado en cola.
+- Repositories con queries JPQL nombradas (sin `findAll` innecesarios, excepto los ya corregidos).
 
 ---
 
-## 6. Recomendaciones priorizadas
+## 8. Pendientes (backlog)
 
-**P0 — hoy mismo:**
-1. Rotar todas las credenciales del `.env`/`application.properties` (Supabase keys, DB password, JWT secret).
-2. Añadir `.env` al `.gitignore` y `git rm --cached .env`.
-3. Eliminar los valores por defecto sensibles de [application.properties](src/main/resources/application.properties) (que falle si falta la env var).
-4. Restringir CORS por entorno (perfiles `dev`/`prod`).
-5. Bajar logging de Spring Security a `INFO` en prod.
-
-**P1 — esta semana:**
-6. Añadir **Flyway** al pom y mover [migrations/](migrations/) a `src/main/resources/db/migration/`.
-7. Implementar verificación de firma del webhook de pagos.
-8. Agregar **SpringDoc OpenAPI** (un solo starter, anotaciones mínimas en controllers).
-
-**P2 — backlog:**
-9. Tests: empezar por `PedidoService` (lógica de estados/stock) con Mockito; integración con Testcontainers para repos.
-10. Crear `README.md` con setup local, variables, comando para correr migraciones y arranque.
-11. Revisar nombre del filtro `SupabaseAuthFilter` (no usa Supabase Auth).
-12. Considerar MapStruct si los `mapToResponse` empiezan a duplicarse.
+| Prioridad | Item |
+|---|---|
+| P0 | **Rotar credenciales** en Supabase (keys, DB password, JWT secret) — el historial git las expone |
+| P1 | Añadir **Flyway** al `pom.xml` y mover [migrations/](migrations/) a `src/main/resources/db/migration/` |
+| P1 | Implementar **verificación de firma** en `POST /api/payments/webhook` |
+| P1 | Agregar **SpringDoc OpenAPI** (swagger-ui) |
+| P2 | Tests unitarios: empezar por `PedidoService` (estados, stock) con Mockito |
+| P2 | Crear `README.md` con setup local, variables requeridas y arranque |
+| P2 | Renombrar `SupabaseAuthFilter` → `JwtAuthFilter` (no usa Supabase Auth) |
+| P2 | Considerar MapStruct cuando los `mapToResponse` crezcan |
 
 ---
 
-## 7. Verificación end-to-end
+## 9. Verificación
 
-Para confirmar el análisis tras cualquier cambio:
+```bash
+# Compilar (debe pasar sin errores)
+./mvnw -DskipTests compile
 
-- `./mvnw clean verify` — compila y corre tests (cuando existan).
-- `./mvnw spring-boot:run` con `.env` cargado — levantar API en `:8080`.
-- `curl http://localhost:8080/api/products` — debe responder sin auth.
-- `POST /api/auth/login` con un usuario seed (ver [V2__initial_data.sql](migrations/V2__initial_data.sql)) — obtener JWT.
-- `git ls-files .env` — debe retornar vacío.
-- Confirmar en Supabase MCP que el schema aplicado coincide con `V1`, `V2`, `V3`.
+# Arrancar (requiere .env completo con credenciales reales)
+./mvnw spring-boot:run
+
+# Smoke test endpoints públicos
+curl http://localhost:8080/api/products
+curl http://localhost:8080/api/categories
+
+# Verificar que .env no está trackeado
+git ls-files .env    # debe retornar vacío
+
+# Flujo de login
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"codigo":"<codigo>","password":"<password>"}'
+```
+
+> **Nota IDE:** el Language Server JDT de VSCode reporta errores falsos en archivos con `@RequiredArgsConstructor` de Lombok. Estos no son errores reales — `./mvnw compile` confirma cero errores de `javac`. Para eliminar los falsos positivos instala el plugin oficial de Lombok para VSCode.
