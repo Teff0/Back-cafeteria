@@ -21,7 +21,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
     @Query("SELECT p FROM Pedido p WHERE p.estado IN :estados ORDER BY p.createdAt ASC")
     List<Pedido> findByEstadoIn(@Param("estados") List<Pedido.Estado> estados);
     
-    @Query("SELECT p FROM Pedido p WHERE p.estado != 'CANCELADO' AND p.estado != 'ENTREGADO' ORDER BY p.createdAt ASC")
+    @Query("SELECT p FROM Pedido p WHERE p.estado NOT IN (com.utp.cafeteria.entity.Pedido.Estado.CANCELADO, com.utp.cafeteria.entity.Pedido.Estado.ENTREGADO) ORDER BY p.createdAt ASC")
     List<Pedido> findAllEnCola();
     
     long countByEstado(Pedido.Estado estado);

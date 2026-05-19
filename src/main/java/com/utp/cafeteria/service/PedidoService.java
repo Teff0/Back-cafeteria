@@ -74,7 +74,7 @@ public class PedidoService {
         List<Pedido> pedidos = pedidoRepository.findByUsuarioId(usuarioId);
         
         return pedidos.stream()
-                .map(this::mapToResponse)
+                .map(this::mapToResponseUsuario)
                 .toList();
     }
 
@@ -89,11 +89,17 @@ public class PedidoService {
         return mapToResponse(pedido);
     }
 
+    public PedidoResponse obtenerPedidoPorId(UUID pedidoId) {
+        Pedido pedido = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido", "id", pedidoId));
+        return mapToResponse(pedido);
+    }
+
     public List<PedidoResponse> obtenerTodosLosPedidos() {
         List<Pedido> pedidos = pedidoRepository.findAll();
         
         return pedidos.stream()
-                .map(this::mapToResponse)
+                .map(this::mapToResponseAdmin)
                 .toList();
     }
 
@@ -101,7 +107,7 @@ public class PedidoService {
         List<Pedido> pedidos = pedidoRepository.findAllEnCola();
         
         return pedidos.stream()
-                .map(this::mapToResponse)
+                .map(this::mapToResponseCaja)
                 .toList();
     }
 
@@ -114,6 +120,23 @@ public class PedidoService {
         pedidoRepository.save(pedido);
 
         return mapToResponse(pedido);
+    }
+
+    @Transactional
+    public PedidoResponse cancelarPedido(UUID pedidoId, UUID usuarioId) {
+        Pedido pedido = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido", "id", pedidoId));
+
+        if (!pedido.getUsuario().getId().equals(usuarioId)) {
+            throw new UnauthorizedException("No tiene acceso a este pedido");
+        }
+
+        if (pedido.getEstado() != Pedido.Estado.PENDIENTE) {
+            throw new BadRequestException("Solo se pueden cancelar pedidos pendientes");
+        }
+
+        pedido.setEstado(Pedido.Estado.CANCELADO);
+        return mapToResponse(pedidoRepository.save(pedido));
     }
 
     private PedidoResponse mapToResponse(Pedido pedido) {
@@ -139,6 +162,58 @@ public class PedidoService {
                         .toList())
                 .createdAt(pedido.getCreatedAt())
                 .updatedAt(pedido.getUpdatedAt())
+                .build();
+    }
+
+    private PedidoResponse mapToResponseAdmin(Pedido pedido) {
+        return PedidoResponse.builder()
+                .id(pedido.getId())
+                .usuarioEmail(pedido.getUsuario().getEmail())
+                .usuarioNombre(pedido.getUsuario().getNombre())
+                .menuId(pedido.getMenu() != null ? pedido.getMenu().getId() : null)
+                .menuFecha(pedido.getMenu() != null ? pedido.getMenu().getFecha().toString() : null)
+                .estado(pedido.getEstado())
+                .horaProgramada(pedido.getHoraProgramada())
+                .total(pedido.getTotal())
+                .observaciones(pedido.getObservaciones())
+                .items(pedido.getItems().stream()
+                        .map(item -> PedidoResponse.ItemPedidoResponse.builder()
+                                .id(item.getId())
+                                .productoId(item.getProducto().getId())
+                                .productoNombre(item.getProducto().getNombre())
+                                .cantidad(item.getCantidad())
+                                .precioUnitario(item.getPrecioUnitario())
+                                .subtotal(item.getSubtotal())
+                                .build())
+                        .toList())
+                .createdAt(pedido.getCreatedAt())
+                .updatedAt(pedido.getUpdatedAt())
+                .build();
+    }
+
+    private PedidoResponse mapToResponseCaja(Pedido pedido) {
+        return PedidoResponse.builder()
+                .id(pedido.getId())
+                .usuarioNombre(pedido.getUsuario().getNombre())
+                .estado(pedido.getEstado())
+                .total(pedido.getTotal())
+                .createdAt(pedido.getCreatedAt())
+                .build();
+    }
+
+    private PedidoResponse mapToResponseUsuario(Pedido pedido) {
+        return PedidoResponse.builder()
+                .id(pedido.getId())
+                .estado(pedido.getEstado())
+                .total(pedido.getTotal())
+                .items(pedido.getItems().stream()
+                        .map(item -> PedidoResponse.ItemPedidoResponse.builder()
+                                .productoNombre(item.getProducto().getNombre())
+                                .cantidad(item.getCantidad())
+                                .subtotal(item.getSubtotal())
+                                .build())
+                        .toList())
+                .createdAt(pedido.getCreatedAt())
                 .build();
     }
 }

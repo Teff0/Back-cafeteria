@@ -22,6 +22,9 @@ public class Usuario {
     private UUID id;
 
     @Column(nullable = false, unique = true)
+    private String codigo;
+
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(nullable = false)
@@ -46,7 +49,8 @@ public class Usuario {
     private LocalDateTime updatedAt;
 
     public enum Rol {
-        ESTUDIANTE,
-        ADMINISTRATIVO
+        USUARIO,
+        CAJA,
+        ADMIN
     }
 }
