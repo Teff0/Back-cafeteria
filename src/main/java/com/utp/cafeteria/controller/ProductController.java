@@ -1,9 +1,11 @@
 package com.utp.cafeteria.controller;
 
+import com.utp.cafeteria.dto.ProductoRequest;
 import com.utp.cafeteria.dto.ProductoResponse;
-import com.utp.cafeteria.entity.Producto;
 import com.utp.cafeteria.service.ProductoService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -25,16 +27,16 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductoResponse> crearProducto(@RequestBody Producto producto) {
-        return ResponseEntity.ok(productoService.crear(producto));
+    public ResponseEntity<ProductoResponse> crearProducto(@Valid @RequestBody ProductoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(productoService.crear(request));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductoResponse> actualizarProducto(
             @PathVariable UUID id,
-            @RequestBody Producto producto) {
-        return ResponseEntity.ok(productoService.actualizar(id, producto));
+            @Valid @RequestBody ProductoRequest request) {
+        return ResponseEntity.ok(productoService.actualizar(id, request));
     }
 
     @DeleteMapping("/{id}")
@@ -46,7 +48,9 @@ public class ProductController {
 
     @PatchMapping("/{id}/availability")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductoResponse> cambiarDisponibilidad(@PathVariable UUID id, @RequestParam Boolean disponible) {
+    public ResponseEntity<ProductoResponse> cambiarDisponibilidad(
+            @PathVariable UUID id,
+            @RequestParam Boolean disponible) {
         return ResponseEntity.ok(productoService.cambiarDisponibilidad(id, disponible));
     }
 }
