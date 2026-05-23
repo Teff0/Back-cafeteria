@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.*;
 
 @Service
@@ -19,14 +20,13 @@ public class ReportService {
         if (fechaInicio == null) fechaInicio = LocalDate.now().minusDays(30);
         if (fechaFin == null) fechaFin = LocalDate.now();
 
-        var pedidos = pedidoRepository.findAll().stream()
-                .filter(p -> p.getCreatedAt().toLocalDate().isAfter(fechaInicio.minusDays(1)))
-                .filter(p -> p.getCreatedAt().toLocalDate().isBefore(fechaFin.plusDays(1)))
-                .filter(p -> p.getEstado() != com.utp.cafeteria.entity.Pedido.Estado.CANCELADO)
-                .toList();
+        var pedidos = pedidoRepository.findByFechaRangoYEstado(
+                fechaInicio.atStartOfDay(),
+                fechaFin.atTime(LocalTime.MAX)
+        );
 
         double totalVentas = pedidos.stream()
-                .mapToDouble(p -> p.getTotal() != null ? p.getTotal() : 0)
+                .mapToDouble(p -> p.getTotal() != null ? p.getTotal().doubleValue() : 0.0)
                 .sum();
 
         long totalPedidos = pedidos.size();
@@ -52,7 +52,7 @@ public class ReportService {
 
             ProductoReporteResponse productoReporte = productosMap.computeIfAbsent(
                     productoId,
-                    () -> ProductoReporteResponse.builder()
+                    k -> ProductoReporteResponse.builder()
                             .productoId(productoId)
                             .productoNombre(productoNombre)
                             .cantidadVendida(0L)
@@ -61,7 +61,10 @@ public class ReportService {
             );
 
             productoReporte.setCantidadVendida(productoReporte.getCantidadVendida() + item.getCantidad());
-            productoReporte.setRevenueTotal(productoReporte.getRevenueTotal() + (item.getSubtotal() != null ? item.getSubtotal() : 0));
+            productoReporte.setRevenueTotal(
+                    productoReporte.getRevenueTotal() +
+                    (item.getSubtotal() != null ? item.getSubtotal().doubleValue() : 0.0)
+            );
         }
 
         return productosMap.values().stream()

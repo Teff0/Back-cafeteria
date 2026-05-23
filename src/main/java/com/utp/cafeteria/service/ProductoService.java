@@ -1,7 +1,8 @@
 package com.utp.cafeteria.service;
 
-import com.utp.cafeteria.dto.*;
-import com.utp.cafeteria.entity.*;
+import com.utp.cafeteria.dto.ProductoRequest;
+import com.utp.cafeteria.dto.ProductoResponse;
+import com.utp.cafeteria.entity.Producto;
 import com.utp.cafeteria.exception.*;
 import com.utp.cafeteria.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -36,37 +37,41 @@ public class ProductoService {
     }
 
     public ProductoResponse obtenerPorId(UUID id) {
-        Producto producto = productoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Producto", "id", id));
-        
-        return ProductoResponse.from(producto);
+        return ProductoResponse.from(
+                productoRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Producto", "id", id))
+        );
     }
 
     @Transactional
-    public ProductoResponse crear(Producto producto) {
-        producto.setDisponible(true);
-        producto.setStock(100);
-        
-        Producto saved = productoRepository.save(producto);
-        
-        return ProductoResponse.from(saved);
+    public ProductoResponse crear(ProductoRequest request) {
+        Producto producto = Producto.builder()
+                .nombre(request.getNombre())
+                .descripcion(request.getDescripcion())
+                .precio(request.getPrecio())
+                .categoria(request.getCategoria())
+                .imagenUrl(request.getImagenUrl())
+                .disponible(true)
+                .stock(request.getStock() != null ? request.getStock() : 100)
+                .build();
+        return ProductoResponse.from(productoRepository.save(producto));
     }
 
     @Transactional
-    public ProductoResponse actualizar(UUID id, Producto productoActualizado) {
+    public ProductoResponse actualizar(UUID id, ProductoRequest request) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Producto", "id", id));
 
-        producto.setNombre(productoActualizado.getNombre());
-        producto.setDescripcion(productoActualizado.getDescripcion());
-        producto.setPrecio(productoActualizado.getPrecio());
-        producto.setCategoria(productoActualizado.getCategoria());
-        producto.setDisponible(productoActualizado.getDisponible());
-        producto.setImagenUrl(productoActualizado.getImagenUrl());
-        
-        Producto saved = productoRepository.save(producto);
-        
-        return ProductoResponse.from(saved);
+        producto.setNombre(request.getNombre());
+        producto.setDescripcion(request.getDescripcion());
+        producto.setPrecio(request.getPrecio());
+        producto.setCategoria(request.getCategoria());
+        producto.setImagenUrl(request.getImagenUrl());
+        if (request.getStock() != null) {
+            producto.setStock(request.getStock());
+        }
+
+        return ProductoResponse.from(productoRepository.save(producto));
     }
 
     @Transactional
