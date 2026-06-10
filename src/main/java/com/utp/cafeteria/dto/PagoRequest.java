@@ -1,6 +1,5 @@
 package com.utp.cafeteria.dto;
 
-import com.utp.cafeteria.entity.Pago;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -25,6 +24,8 @@ public class PagoRequest {
     @Positive(message = "El monto debe ser mayor a 0")
     private BigDecimal monto;
 
-    @NotBlank(message = "El método de pago es requerido")
+    @NotBlank(message = "El metodo de pago es requerido")
     private String metodoPago;
+
+    private String comprobanteUrl;
 }

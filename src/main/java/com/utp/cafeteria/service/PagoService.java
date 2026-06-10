@@ -2,10 +2,13 @@ package com.utp.cafeteria.service;
 
 import com.utp.cafeteria.dto.PagoRequest;
 import com.utp.cafeteria.dto.PagoResponse;
+import com.utp.cafeteria.entity.Notificacion;
 import com.utp.cafeteria.entity.Pago;
 import com.utp.cafeteria.entity.Pedido;
+import com.utp.cafeteria.entity.Usuario;
 import com.utp.cafeteria.exception.*;
-import com.utp.cafeteria.repository.*;
+import com.utp.cafeteria.repository.PagoRepository;
+import com.utp.cafeteria.repository.PedidoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +22,7 @@ public class PagoService {
 
     private final PagoRepository pagoRepository;
     private final PedidoRepository pedidoRepository;
+    private final NotificacionService notificacionService;
 
     @Transactional
     public PagoResponse procesarPago(PagoRequest request, UUID usuarioId) {
@@ -28,15 +32,12 @@ public class PagoService {
         if (!pedido.getUsuario().getId().equals(usuarioId)) {
             throw new UnauthorizedException("No tiene acceso a este pedido");
         }
-
         if (pedido.getEstado() != Pedido.Estado.PENDIENTE) {
             throw new BadRequestException("El pedido ya fue procesado o cancelado");
         }
-
         if (pagoRepository.existsByPedidoId(pedido.getId())) {
             throw new ConflictException("Ya existe un pago para este pedido");
         }
-
         if (request.getMonto().compareTo(pedido.getTotal()) != 0) {
             throw new BadRequestException(
                     "El monto enviado (" + request.getMonto() + ") no coincide con el total del pedido (" + pedido.getTotal() + ")"
@@ -50,18 +51,26 @@ public class PagoService {
             throw new BadRequestException("Metodo de pago invalido: " + request.getMetodoPago());
         }
 
+        Usuario usuario = pedido.getUsuario();
+
         Pago pago = Pago.builder()
                 .pedido(pedido)
+                .usuario(usuario)
                 .monto(request.getMonto())
                 .metodoPago(metodo)
                 .estado(Pago.EstadoPago.COMPLETADO)
                 .codigoTransaccion("TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .comprobanteUrl(request.getComprobanteUrl())
                 .fechaPago(LocalDateTime.now())
                 .build();
 
         pagoRepository.save(pago);
         pedido.setEstado(Pedido.Estado.PAGADO);
         pedidoRepository.save(pedido);
+
+        notificacionService.crearNotificacion(usuario, pedido,
+                Notificacion.TipoNotificacion.PAGO,
+                "Pago recibido por S/. " + request.getMonto() + " via " + metodo.name());
 
         return mapToResponse(pago);
     }
@@ -73,7 +82,6 @@ public class PagoService {
         if (!pago.getPedido().getUsuario().getId().equals(usuarioId)) {
             throw new UnauthorizedException("No tiene acceso a este pago");
         }
-
         return mapToResponse(pago);
     }
 
@@ -81,10 +89,12 @@ public class PagoService {
         return PagoResponse.builder()
                 .id(pago.getId())
                 .pedidoId(pago.getPedido().getId())
+                .usuarioId(pago.getUsuario().getId())
                 .monto(pago.getMonto())
                 .metodoPago(pago.getMetodoPago())
                 .estado(pago.getEstado())
                 .codigoTransaccion(pago.getCodigoTransaccion())
+                .comprobanteUrl(pago.getComprobanteUrl())
                 .fechaPago(pago.getFechaPago())
                 .createdAt(pago.getCreatedAt())
                 .build();

@@ -19,14 +19,22 @@ import java.util.UUID;
 public class PedidoResponse {
 
     private UUID id;
+    private String numeroPedido;
     private String usuarioEmail;
     private String usuarioNombre;
     private UUID menuId;
     private String menuFecha;
+    private String codigoPromo;
     private Pedido.Estado estado;
+    private Pedido.MetodoPago metodoPago;
+    private String voucherUrl;
     private LocalTime horaProgramada;
+    private BigDecimal subtotal;
+    private BigDecimal descuentoAplicado;
     private BigDecimal total;
     private String observaciones;
+    private String motivoCancelacion;
+    private Integer tiempoEstimado;
     private List<ItemPedidoResponse> items;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -42,5 +50,6 @@ public class PedidoResponse {
         private Integer cantidad;
         private BigDecimal precioUnitario;
         private BigDecimal subtotal;
+        private String nota;
     }
 }

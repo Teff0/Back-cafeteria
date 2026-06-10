@@ -1,8 +1,8 @@
 package com.utp.cafeteria.controller;
 
-import com.utp.cafeteria.dto.MenuRequest;
-import com.utp.cafeteria.dto.MenuResponse;
-import com.utp.cafeteria.service.MenuService;
+import com.utp.cafeteria.dto.CategoriaRequest;
+import com.utp.cafeteria.dto.CategoriaResponse;
+import com.utp.cafeteria.service.CategoriaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,34 +18,35 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CategoryController {
 
-    private final MenuService menuService;
+    private final CategoriaService categoriaService;
 
     @GetMapping
-    public ResponseEntity<List<MenuResponse>> obtenerCategorias() {
-        return ResponseEntity.ok(menuService.obtenerMenusDisponibles());
+    public ResponseEntity<List<CategoriaResponse>> listar() {
+        return ResponseEntity.ok(categoriaService.obtenerTodas());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<MenuResponse> obtenerCategoria(@PathVariable UUID id) {
-        return ResponseEntity.ok(menuService.obtenerMenu(id));
+    public ResponseEntity<CategoriaResponse> obtener(@PathVariable UUID id) {
+        return ResponseEntity.ok(categoriaService.obtenerPorId(id));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MenuResponse> crearCategoria(@Valid @RequestBody MenuRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(menuService.crearMenu(request));
+    public ResponseEntity<CategoriaResponse> crear(@Valid @RequestBody CategoriaRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(categoriaService.crear(request));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MenuResponse> actualizarCategoria(@PathVariable UUID id, @Valid @RequestBody MenuRequest request) {
-        return ResponseEntity.ok(menuService.actualizarMenu(id, request));
+    public ResponseEntity<CategoriaResponse> actualizar(@PathVariable UUID id,
+                                                         @Valid @RequestBody CategoriaRequest request) {
+        return ResponseEntity.ok(categoriaService.actualizar(id, request));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> eliminarCategoria(@PathVariable UUID id) {
-        menuService.eliminarMenu(id);
+    public ResponseEntity<Void> eliminar(@PathVariable UUID id) {
+        categoriaService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 }

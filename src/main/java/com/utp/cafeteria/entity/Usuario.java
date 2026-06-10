@@ -33,10 +33,15 @@ public class Usuario {
     @Column(nullable = false)
     private String nombre;
 
+    private String apellidos;
+
+    private String cargo;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Rol rol;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean activo = true;
 

@@ -28,7 +28,4 @@ public class CarritoItem {
 
     @Column(nullable = false)
     private Integer cantidad;
-
-    public void calcularSubtotal() {
-    }
 }

@@ -19,21 +19,31 @@ public class ProductoResponse {
     private String nombre;
     private String descripcion;
     private BigDecimal precio;
-    private Producto.Categoria categoria;
+    private UUID categoriaId;
+    private String categoriaNombre;
+    private UUID subcategoriaId;
+    private String subcategoriaNombre;
     private Boolean disponible;
     private String imagenUrl;
     private Integer stock;
+    private Integer tiempoPreparacion;
+    private String horarioDisponible;
 
-    public static ProductoResponse from(Producto producto) {
+    public static ProductoResponse from(Producto p) {
         return ProductoResponse.builder()
-                .id(producto.getId())
-                .nombre(producto.getNombre())
-                .descripcion(producto.getDescripcion())
-                .precio(producto.getPrecio())
-                .categoria(producto.getCategoria())
-                .disponible(producto.getDisponible())
-                .imagenUrl(producto.getImagenUrl())
-                .stock(producto.getStock())
+                .id(p.getId())
+                .nombre(p.getNombre())
+                .descripcion(p.getDescripcion())
+                .precio(p.getPrecio())
+                .categoriaId(p.getCategoria().getId())
+                .categoriaNombre(p.getCategoria().getNombre())
+                .subcategoriaId(p.getSubcategoria() != null ? p.getSubcategoria().getId() : null)
+                .subcategoriaNombre(p.getSubcategoria() != null ? p.getSubcategoria().getNombre() : null)
+                .disponible(p.getDisponible())
+                .imagenUrl(p.getImagenUrl())
+                .stock(p.getStock())
+                .tiempoPreparacion(p.getTiempoPreparacion())
+                .horarioDisponible(p.getHorarioDisponible())
                 .build();
     }
 }

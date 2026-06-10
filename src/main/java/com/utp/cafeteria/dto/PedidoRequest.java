@@ -1,5 +1,6 @@
 package com.utp.cafeteria.dto;
 
+import com.utp.cafeteria.entity.Pedido;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -20,10 +21,13 @@ public class PedidoRequest {
 
     private UUID menuId;
 
-    @NotNull(message = "La hora programada es requerida")
     private LocalTime horaProgramada;
 
+    @NotNull(message = "El método de pago es requerido")
+    private Pedido.MetodoPago metodoPago;
+
     private String observaciones;
+    private String codigoPromo;
 
     @NotEmpty(message = "Debe incluir al menos un producto")
     @Valid
