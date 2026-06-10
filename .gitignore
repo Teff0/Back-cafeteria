@@ -42,3 +42,6 @@ build/
 ### Logs ###
 *.log
 logs/
+
+### Archivos subidos (comprobantes / imagenes) ###
+uploads/

@@ -1,6 +1,5 @@
 package com.utp.cafeteria.dto;
 
-import com.utp.cafeteria.entity.Producto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -9,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -25,9 +25,13 @@ public class ProductoRequest {
     private BigDecimal precio;
 
     @NotNull(message = "La categoria es requerida")
-    private Producto.Categoria categoria;
+    private UUID categoriaId;
+
+    private UUID subcategoriaId;
 
     private String imagenUrl;
 
     private Integer stock;
+
+    private Boolean disponible;
 }

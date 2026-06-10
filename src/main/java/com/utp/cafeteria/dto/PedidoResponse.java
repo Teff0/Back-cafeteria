@@ -27,6 +27,7 @@ public class PedidoResponse {
     private LocalTime horaProgramada;
     private BigDecimal total;
     private String observaciones;
+    private String voucherUrl;
     private List<ItemPedidoResponse> items;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

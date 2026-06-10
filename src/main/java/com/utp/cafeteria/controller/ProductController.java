@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -23,6 +24,16 @@ public class ProductController {
     @GetMapping
     public ResponseEntity<List<ProductoResponse>> listarProductos() {
         return ResponseEntity.ok(productoService.obtenerTodos());
+    }
+
+    @GetMapping("/available")
+    public ResponseEntity<List<ProductoResponse>> listarDisponibles() {
+        return ResponseEntity.ok(productoService.obtenerDisponibles());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductoResponse> obtenerProducto(@PathVariable UUID id) {
+        return ResponseEntity.ok(productoService.obtenerPorId(id));
     }
 
     @PostMapping
@@ -46,11 +57,12 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{id}/availability")
+    @PatchMapping("/{id}/disponible")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductoResponse> cambiarDisponibilidad(
             @PathVariable UUID id,
-            @RequestParam Boolean disponible) {
+            @RequestBody Map<String, Boolean> body) {
+        Boolean disponible = body.getOrDefault("disponible", Boolean.TRUE);
         return ResponseEntity.ok(productoService.cambiarDisponibilidad(id, disponible));
     }
 }

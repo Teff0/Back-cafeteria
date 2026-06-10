@@ -142,6 +142,23 @@ public class PedidoService {
     }
 
     @Transactional
+    public PedidoResponse guardarVoucher(UUID pedidoId, String voucherUrl, UUID usuarioId) {
+        Pedido pedido = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido", "id", pedidoId));
+
+        if (!pedido.getUsuario().getId().equals(usuarioId)) {
+            throw new UnauthorizedException("No tiene acceso a este pedido");
+        }
+
+        pedido.setVoucherUrl(voucherUrl);
+        // Al subir el comprobante el pedido pasa a "pago en verificacion"
+        if (pedido.getEstado() == Pedido.Estado.PENDIENTE) {
+            pedido.setEstado(Pedido.Estado.PAGADO);
+        }
+        return mapToResponse(pedidoRepository.save(pedido));
+    }
+
+    @Transactional
     public PedidoResponse cancelarPedido(UUID pedidoId, UUID usuarioId) {
         Pedido pedido = pedidoRepository.findById(pedidoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido", "id", pedidoId));
@@ -175,6 +192,7 @@ public class PedidoService {
                 .horaProgramada(pedido.getHoraProgramada())
                 .total(pedido.getTotal())
                 .observaciones(pedido.getObservaciones())
+                .voucherUrl(pedido.getVoucherUrl())
                 .items(pedido.getItems().stream()
                         .map(item -> PedidoResponse.ItemPedidoResponse.builder()
                                 .id(item.getId())
@@ -196,6 +214,14 @@ public class PedidoService {
                 .usuarioNombre(pedido.getUsuario().getNombre())
                 .estado(pedido.getEstado())
                 .total(pedido.getTotal())
+                .voucherUrl(pedido.getVoucherUrl())
+                .items(pedido.getItems().stream()
+                        .map(item -> PedidoResponse.ItemPedidoResponse.builder()
+                                .productoNombre(item.getProducto().getNombre())
+                                .cantidad(item.getCantidad())
+                                .subtotal(item.getSubtotal())
+                                .build())
+                        .toList())
                 .createdAt(pedido.getCreatedAt())
                 .build();
     }
