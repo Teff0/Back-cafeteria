@@ -21,36 +21,54 @@ public class ProductController {
     private final ProductoService productoService;
 
     @GetMapping
-    public ResponseEntity<List<ProductoResponse>> listarProductos() {
+    public ResponseEntity<List<ProductoResponse>> listar() {
         return ResponseEntity.ok(productoService.obtenerTodos());
+    }
+
+    @GetMapping("/available")
+    public ResponseEntity<List<ProductoResponse>> listarDisponibles() {
+        return ResponseEntity.ok(productoService.obtenerDisponibles());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductoResponse> obtener(@PathVariable UUID id) {
+        return ResponseEntity.ok(productoService.obtenerPorId(id));
+    }
+
+    @GetMapping("/by-category/{categoriaId}")
+    public ResponseEntity<List<ProductoResponse>> listarPorCategoria(@PathVariable UUID categoriaId) {
+        return ResponseEntity.ok(productoService.obtenerPorCategoria(categoriaId));
+    }
+
+    @GetMapping("/by-subcategory/{subcategoriaId}")
+    public ResponseEntity<List<ProductoResponse>> listarPorSubcategoria(@PathVariable UUID subcategoriaId) {
+        return ResponseEntity.ok(productoService.obtenerPorSubcategoria(subcategoriaId));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductoResponse> crearProducto(@Valid @RequestBody ProductoRequest request) {
+    public ResponseEntity<ProductoResponse> crear(@Valid @RequestBody ProductoRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(productoService.crear(request));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductoResponse> actualizarProducto(
-            @PathVariable UUID id,
-            @Valid @RequestBody ProductoRequest request) {
+    public ResponseEntity<ProductoResponse> actualizar(@PathVariable UUID id,
+                                                        @Valid @RequestBody ProductoRequest request) {
         return ResponseEntity.ok(productoService.actualizar(id, request));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> eliminarProducto(@PathVariable UUID id) {
+    public ResponseEntity<Void> eliminar(@PathVariable UUID id) {
         productoService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/availability")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductoResponse> cambiarDisponibilidad(
-            @PathVariable UUID id,
-            @RequestParam Boolean disponible) {
+    public ResponseEntity<ProductoResponse> cambiarDisponibilidad(@PathVariable UUID id,
+                                                                   @RequestParam Boolean disponible) {
         return ResponseEntity.ok(productoService.cambiarDisponibilidad(id, disponible));
     }
 }

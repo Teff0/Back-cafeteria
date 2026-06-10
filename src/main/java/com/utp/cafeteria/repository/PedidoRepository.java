@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -17,17 +16,10 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
     @Query("SELECT p FROM Pedido p WHERE p.usuario.id = :usuarioId ORDER BY p.createdAt DESC")
     List<Pedido> findByUsuarioId(@Param("usuarioId") UUID usuarioId);
 
-    @Query("SELECT p FROM Pedido p WHERE p.estado = :estado ORDER BY p.createdAt DESC")
-    List<Pedido> findByEstado(@Param("estado") Pedido.Estado estado);
-
-    @Query("SELECT p FROM Pedido p WHERE p.estado IN :estados ORDER BY p.createdAt ASC")
-    List<Pedido> findByEstadoIn(@Param("estados") List<Pedido.Estado> estados);
-
     @Query("SELECT p FROM Pedido p WHERE p.estado NOT IN (com.utp.cafeteria.entity.Pedido.Estado.CANCELADO, com.utp.cafeteria.entity.Pedido.Estado.ENTREGADO) ORDER BY p.createdAt ASC")
     List<Pedido> findAllEnCola();
 
     @Query("SELECT p FROM Pedido p WHERE p.createdAt >= :inicio AND p.createdAt < :fin AND p.estado <> com.utp.cafeteria.entity.Pedido.Estado.CANCELADO ORDER BY p.createdAt DESC")
     List<Pedido> findByFechaRangoYEstado(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
 
-    long countByEstado(Pedido.Estado estado);
 }

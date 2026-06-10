@@ -26,11 +26,15 @@ public class Pago {
     @JoinColumn(name = "pedido_id", nullable = false, unique = true)
     private Pedido pedido;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal monto;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "metodo_pago", nullable = false)
     private MetodoPago metodoPago;
 
     @Enumerated(EnumType.STRING)
@@ -39,6 +43,9 @@ public class Pago {
 
     @Column(name = "codigo_transaccion")
     private String codigoTransaccion;
+
+    @Column(name = "comprobante_url")
+    private String comprobanteUrl;
 
     @Column(name = "fecha_pago")
     private LocalDateTime fechaPago;

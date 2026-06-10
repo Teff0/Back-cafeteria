@@ -12,7 +12,7 @@ import java.util.UUID;
 @Repository
 public interface MenuRepository extends JpaRepository<Menu, UUID> {
     List<Menu> findByActivoTrue();
-    Optional<Menu> findByFechaAndActivoTrue(LocalDate fecha);
+    List<Menu> findByFechaAndActivoTrue(LocalDate fecha);
     List<Menu> findByFechaAndActivoTrueOrderByHorario(LocalDate fecha);
     Optional<Menu> findByFechaAndHorarioAndActivoTrue(LocalDate fecha, Menu.Horario horario);
 }

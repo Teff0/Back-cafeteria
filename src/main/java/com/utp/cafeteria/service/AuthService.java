@@ -18,11 +18,11 @@ public class AuthService {
     private final JwtUtil jwtUtil;
 
     public AuthResponse login(LoginRequest request) {
-        Usuario usuario = usuarioRepository.findByCodigo(request.getCodigo())
-            .orElseThrow(() -> new UnauthorizedException("Código o contraseña inválidos"));
+        Usuario usuario = usuarioRepository.findByEmail(request.getEmail())
+            .orElseThrow(() -> new UnauthorizedException("Correo o contraseña inválidos"));
 
         if (!passwordEncoder.matches(request.getPassword(), usuario.getPassword())) {
-            throw new UnauthorizedException("Código o contraseña inválidos");
+            throw new UnauthorizedException("Correo o contraseña inválidos");
         }
 
         if (!usuario.getActivo()) {

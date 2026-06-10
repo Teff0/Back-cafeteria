@@ -33,6 +33,13 @@ public class Pedido {
     @JoinColumn(name = "menu_id")
     private Menu menu;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "descuento_id")
+    private PromoDescuento descuento;
+
+    @Column(name = "numero_pedido", unique = true)
+    private String numeroPedido;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Estado estado;
@@ -40,11 +47,33 @@ public class Pedido {
     @Column(name = "hora_programada", nullable = false)
     private LocalTime horaProgramada;
 
+    @Builder.Default
+    @Column(precision = 10, scale = 2)
+    private BigDecimal subtotal = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "descuento_aplicado", precision = 10, scale = 2)
+    private BigDecimal descuentoAplicado = BigDecimal.ZERO;
+
+    @Builder.Default
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total = BigDecimal.ZERO;
 
     @Column(columnDefinition = "TEXT")
     private String observaciones;
+
+    @Column(name = "motivo_cancelacion", columnDefinition = "TEXT")
+    private String motivoCancelacion;
+
+    @Column(name = "tiempo_estimado")
+    private Integer tiempoEstimado;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "metodo_pago")
+    private MetodoPago metodoPago;
+
+    @Column(name = "voucher_url", columnDefinition = "TEXT")
+    private String voucherUrl;
 
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -67,14 +96,19 @@ public class Pedido {
         CANCELADO
     }
 
+    public enum MetodoPago {
+        YAPE, PLIN, EFECTIVO
+    }
+
     public void agregarItem(ItemPedido item) {
         items.add(item);
         item.setPedido(this);
     }
 
     public void calcularTotal() {
-        this.total = items.stream()
+        this.subtotal = items.stream()
             .map(ItemPedido::getSubtotal)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+        this.total = subtotal.subtract(descuentoAplicado);
     }
 }

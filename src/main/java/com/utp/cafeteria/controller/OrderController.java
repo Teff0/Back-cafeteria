@@ -80,12 +80,22 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
+    @PatchMapping("/{id}/voucher")
+    @PreAuthorize("hasRole('USUARIO')")
+    public ResponseEntity<PedidoResponse> subirVoucher(
+            @PathVariable UUID id,
+            @RequestBody VoucherRequest request,
+            @AuthenticationPrincipal CustomUserDetailsService.CustomUserDetails user) {
+
+        return ResponseEntity.ok(pedidoService.subirVoucher(id, request.getVoucherUrl(), user.getUsuario().getId()));
+    }
+
     @PatchMapping("/{id}/cancel")
     @PreAuthorize("hasRole('USUARIO')")
     public ResponseEntity<PedidoResponse> cancelarPedido(
             @PathVariable UUID id,
             @AuthenticationPrincipal CustomUserDetailsService.CustomUserDetails user) {
-        
+
         return ResponseEntity.ok(pedidoService.cancelarPedido(id, user.getUsuario().getId()));
     }
 }

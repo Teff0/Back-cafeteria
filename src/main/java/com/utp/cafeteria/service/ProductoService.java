@@ -2,9 +2,13 @@ package com.utp.cafeteria.service;
 
 import com.utp.cafeteria.dto.ProductoRequest;
 import com.utp.cafeteria.dto.ProductoResponse;
+import com.utp.cafeteria.entity.Categoria;
 import com.utp.cafeteria.entity.Producto;
-import com.utp.cafeteria.exception.*;
-import com.utp.cafeteria.repository.*;
+import com.utp.cafeteria.entity.Subcategoria;
+import com.utp.cafeteria.exception.ResourceNotFoundException;
+import com.utp.cafeteria.repository.CategoriaRepository;
+import com.utp.cafeteria.repository.ProductoRepository;
+import com.utp.cafeteria.repository.SubcategoriaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,25 +21,38 @@ import java.util.UUID;
 public class ProductoService {
 
     private final ProductoRepository productoRepository;
+    private final CategoriaRepository categoriaRepository;
+    private final SubcategoriaRepository subcategoriaRepository;
 
+    @Transactional(readOnly = true)
     public List<ProductoResponse> obtenerTodos() {
         return productoRepository.findAll().stream()
                 .map(ProductoResponse::from)
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<ProductoResponse> obtenerDisponibles() {
         return productoRepository.findByDisponibleTrue().stream()
                 .map(ProductoResponse::from)
                 .toList();
     }
 
-    public List<ProductoResponse> obtenerPorCategoria(Producto.Categoria categoria) {
-        return productoRepository.findByDisponibleTrueAndCategoria(categoria).stream()
+    @Transactional(readOnly = true)
+    public List<ProductoResponse> obtenerPorCategoria(UUID categoriaId) {
+        return productoRepository.findByCategoriaId(categoriaId).stream()
                 .map(ProductoResponse::from)
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<ProductoResponse> obtenerPorSubcategoria(UUID subcategoriaId) {
+        return productoRepository.findBySubcategoriaId(subcategoriaId).stream()
+                .map(ProductoResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public ProductoResponse obtenerPorId(UUID id) {
         return ProductoResponse.from(
                 productoRepository.findById(id)
@@ -45,14 +62,25 @@ public class ProductoService {
 
     @Transactional
     public ProductoResponse crear(ProductoRequest request) {
+        Categoria categoria = categoriaRepository.findById(request.getCategoriaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria", "id", request.getCategoriaId()));
+
+        Subcategoria subcategoria = null;
+        if (request.getSubcategoriaId() != null) {
+            subcategoria = subcategoriaRepository.findById(request.getSubcategoriaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Subcategoria", "id", request.getSubcategoriaId()));
+        }
+
         Producto producto = Producto.builder()
                 .nombre(request.getNombre())
                 .descripcion(request.getDescripcion())
                 .precio(request.getPrecio())
-                .categoria(request.getCategoria())
+                .categoria(categoria)
+                .subcategoria(subcategoria)
                 .imagenUrl(request.getImagenUrl())
-                .disponible(true)
                 .stock(request.getStock() != null ? request.getStock() : 100)
+                .tiempoPreparacion(request.getTiempoPreparacion())
+                .horarioDisponible(request.getHorarioDisponible())
                 .build();
         return ProductoResponse.from(productoRepository.save(producto));
     }
@@ -62,11 +90,23 @@ public class ProductoService {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Producto", "id", id));
 
+        Categoria categoria = categoriaRepository.findById(request.getCategoriaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria", "id", request.getCategoriaId()));
+
+        Subcategoria subcategoria = null;
+        if (request.getSubcategoriaId() != null) {
+            subcategoria = subcategoriaRepository.findById(request.getSubcategoriaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Subcategoria", "id", request.getSubcategoriaId()));
+        }
+
         producto.setNombre(request.getNombre());
         producto.setDescripcion(request.getDescripcion());
         producto.setPrecio(request.getPrecio());
-        producto.setCategoria(request.getCategoria());
+        producto.setCategoria(categoria);
+        producto.setSubcategoria(subcategoria);
         producto.setImagenUrl(request.getImagenUrl());
+        producto.setTiempoPreparacion(request.getTiempoPreparacion());
+        producto.setHorarioDisponible(request.getHorarioDisponible());
         if (request.getStock() != null) {
             producto.setStock(request.getStock());
         }
