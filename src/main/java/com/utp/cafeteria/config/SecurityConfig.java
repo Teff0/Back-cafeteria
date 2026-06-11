@@ -1,6 +1,6 @@
 package com.utp.cafeteria.config;
 
-import com.utp.cafeteria.security.SupabaseAuthFilter;
+import com.utp.cafeteria.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,7 +23,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final SupabaseAuthFilter supabaseAuthFilter;
+    private final JwtAuthFilter jwtAuthFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -50,7 +50,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-            .addFilterBefore(supabaseAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

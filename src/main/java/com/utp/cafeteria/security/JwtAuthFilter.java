@@ -21,7 +21,7 @@ import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
-public class SupabaseAuthFilter extends OncePerRequestFilter {
+public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService customUserDetailsService;
