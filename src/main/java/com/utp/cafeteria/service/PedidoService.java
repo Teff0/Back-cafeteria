@@ -167,8 +167,8 @@ public class PedidoService {
             throw new UnauthorizedException("No tiene acceso a este pedido");
         }
 
-        if (pedido.getEstado() != Pedido.Estado.PENDIENTE) {
-            throw new BadRequestException("Solo se pueden cancelar pedidos pendientes");
+        if (pedido.getEstado() != Pedido.Estado.PENDIENTE && pedido.getEstado() != Pedido.Estado.PAGADO) {
+            throw new BadRequestException("Solo se pueden cancelar pedidos pendientes o en verificación de pago");
         }
 
         for (ItemPedido item : pedido.getItems()) {
