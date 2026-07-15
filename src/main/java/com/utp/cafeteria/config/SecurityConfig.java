@@ -16,6 +16,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
@@ -34,6 +37,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
+                // Monitoreo: estado e info publicos; el resto (metricas) solo ADMIN
+                .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/actuator/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/categories", "/api/categories/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/subcategories", "/api/subcategories/**").permitAll()
@@ -46,6 +52,19 @@ public class SecurityConfig {
                 .requestMatchers("/api/cart/**").hasRole("USUARIO")
                 .requestMatchers("/api/payments/**").hasRole("USUARIO")
                 .anyRequest().authenticated()
+            )
+            .headers(headers -> headers
+                // Evita clickjacking: la app no puede incrustarse en un <iframe>.
+                .frameOptions(frame -> frame.deny())
+                // Evita que el navegador "adivine" tipos MIME (X-Content-Type-Options: nosniff).
+                .contentTypeOptions(withDefaults())
+                // Fuerza HTTPS en navegadores compatibles una vez servido por HTTPS.
+                .httpStrictTransportSecurity(hsts -> hsts
+                    .includeSubDomains(true)
+                    .maxAgeInSeconds(31536000))
+                // Limita la información de referer que se envía a otros orígenes.
+                .referrerPolicy(ref -> ref
+                    .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
