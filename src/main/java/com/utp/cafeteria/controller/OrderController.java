@@ -15,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -85,7 +86,18 @@ public class OrderController {
     public ResponseEntity<PedidoResponse> cancelarPedido(
             @PathVariable UUID id,
             @AuthenticationPrincipal CustomUserDetailsService.CustomUserDetails user) {
-        
+
         return ResponseEntity.ok(pedidoService.cancelarPedido(id, user.getUsuario().getId()));
+    }
+
+    @PatchMapping("/{id}/voucher")
+    @PreAuthorize("hasRole('USUARIO')")
+    public ResponseEntity<PedidoResponse> subirVoucher(
+            @PathVariable UUID id,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal CustomUserDetailsService.CustomUserDetails user) {
+
+        String voucherUrl = body.get("voucherUrl");
+        return ResponseEntity.ok(pedidoService.guardarVoucher(id, voucherUrl, user.getUsuario().getId()));
     }
 }

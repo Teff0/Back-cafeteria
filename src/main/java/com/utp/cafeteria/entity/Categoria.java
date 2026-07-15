@@ -2,10 +2,7 @@ package com.utp.cafeteria.entity;
 
 import lombok.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -13,24 +10,15 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Menu {
+public class Categoria {
 
     private UUID id;
-    private LocalDate fecha;
-    private Horario horario;
+    private String nombre;
+    private String descripcion;
 
     @Builder.Default
     private Boolean activo = true;
 
-    @Builder.Default
-    private Set<Producto> productos = new HashSet<>();
-
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
-    public enum Horario {
-        DESAYUNO,
-        ALMUERZO,
-        CENA
-    }
 }

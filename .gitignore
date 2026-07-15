@@ -42,3 +42,11 @@ build/
 ### Logs ###
 *.log
 logs/
+
+### Archivos subidos (comprobantes / imagenes) ###
+uploads/
+
+### Documentos internos ###
+AUDITORIA.md
+Plan-Tech-Stack
+iniciar-backend.bat

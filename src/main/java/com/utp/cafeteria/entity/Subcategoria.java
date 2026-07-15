@@ -10,24 +10,13 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Usuario {
+public class Subcategoria {
 
     private UUID id;
-    private String codigo;
-    private String email;
-    private String password;
+    private UUID categoriaId;
     private String nombre;
-    private Rol rol;
-
-    @Builder.Default
-    private Boolean activo = true;
+    private String descripcion;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
-    public enum Rol {
-        USUARIO,
-        CAJA,
-        ADMIN
-    }
 }

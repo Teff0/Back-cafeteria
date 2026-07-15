@@ -2,7 +2,9 @@ package com.utp.cafeteria.service;
 
 import com.utp.cafeteria.dto.ProductoRequest;
 import com.utp.cafeteria.dto.ProductoResponse;
+import com.utp.cafeteria.entity.Categoria;
 import com.utp.cafeteria.entity.Producto;
+import com.utp.cafeteria.entity.Subcategoria;
 import com.utp.cafeteria.exception.*;
 import com.utp.cafeteria.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,8 @@ import java.util.UUID;
 public class ProductoService {
 
     private final ProductoRepository productoRepository;
+    private final CategoriaRepository categoriaRepository;
+    private final SubcategoriaRepository subcategoriaRepository;
 
     public List<ProductoResponse> obtenerTodos() {
         return productoRepository.findAll().stream()
@@ -30,12 +34,6 @@ public class ProductoService {
                 .toList();
     }
 
-    public List<ProductoResponse> obtenerPorCategoria(Producto.Categoria categoria) {
-        return productoRepository.findByDisponibleTrueAndCategoria(categoria).stream()
-                .map(ProductoResponse::from)
-                .toList();
-    }
-
     public ProductoResponse obtenerPorId(UUID id) {
         return ProductoResponse.from(
                 productoRepository.findById(id)
@@ -45,13 +43,17 @@ public class ProductoService {
 
     @Transactional
     public ProductoResponse crear(ProductoRequest request) {
+        Categoria categoria = resolverCategoria(request.getCategoriaId());
+        Subcategoria subcategoria = resolverSubcategoria(request.getSubcategoriaId());
+
         Producto producto = Producto.builder()
                 .nombre(request.getNombre())
                 .descripcion(request.getDescripcion())
                 .precio(request.getPrecio())
-                .categoria(request.getCategoria())
+                .categoria(categoria)
+                .subcategoria(subcategoria)
                 .imagenUrl(request.getImagenUrl())
-                .disponible(true)
+                .disponible(request.getDisponible() != null ? request.getDisponible() : true)
                 .stock(request.getStock() != null ? request.getStock() : 100)
                 .build();
         return ProductoResponse.from(productoRepository.save(producto));
@@ -65,10 +67,14 @@ public class ProductoService {
         producto.setNombre(request.getNombre());
         producto.setDescripcion(request.getDescripcion());
         producto.setPrecio(request.getPrecio());
-        producto.setCategoria(request.getCategoria());
+        producto.setCategoria(resolverCategoria(request.getCategoriaId()));
+        producto.setSubcategoria(resolverSubcategoria(request.getSubcategoriaId()));
         producto.setImagenUrl(request.getImagenUrl());
         if (request.getStock() != null) {
             producto.setStock(request.getStock());
+        }
+        if (request.getDisponible() != null) {
+            producto.setDisponible(request.getDisponible());
         }
 
         return ProductoResponse.from(productoRepository.save(producto));
@@ -88,5 +94,19 @@ public class ProductoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Producto", "id", id));
         producto.setDisponible(disponible);
         return ProductoResponse.from(productoRepository.save(producto));
+    }
+
+    private Categoria resolverCategoria(UUID categoriaId) {
+        if (categoriaId == null) {
+            throw new BadRequestException("La categoria es requerida");
+        }
+        return categoriaRepository.findById(categoriaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria", "id", categoriaId));
+    }
+
+    private Subcategoria resolverSubcategoria(UUID subcategoriaId) {
+        if (subcategoriaId == null) return null;
+        return subcategoriaRepository.findById(subcategoriaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Subcategoria", "id", subcategoriaId));
     }
 }

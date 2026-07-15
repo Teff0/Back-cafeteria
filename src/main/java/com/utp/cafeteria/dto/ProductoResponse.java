@@ -19,21 +19,28 @@ public class ProductoResponse {
     private String nombre;
     private String descripcion;
     private BigDecimal precio;
-    private Producto.Categoria categoria;
     private Boolean disponible;
     private String imagenUrl;
     private Integer stock;
 
-    public static ProductoResponse from(Producto producto) {
+    private UUID categoriaId;
+    private String categoriaNombre;
+    private UUID subcategoriaId;
+    private String subcategoriaNombre;
+
+    public static ProductoResponse from(Producto p) {
         return ProductoResponse.builder()
-                .id(producto.getId())
-                .nombre(producto.getNombre())
-                .descripcion(producto.getDescripcion())
-                .precio(producto.getPrecio())
-                .categoria(producto.getCategoria())
-                .disponible(producto.getDisponible())
-                .imagenUrl(producto.getImagenUrl())
-                .stock(producto.getStock())
+                .id(p.getId())
+                .nombre(p.getNombre())
+                .descripcion(p.getDescripcion())
+                .precio(p.getPrecio())
+                .disponible(p.getDisponible())
+                .imagenUrl(p.getImagenUrl())
+                .stock(p.getStock())
+                .categoriaId(p.getCategoria() != null ? p.getCategoria().getId() : null)
+                .categoriaNombre(p.getCategoria() != null ? p.getCategoria().getNombre() : null)
+                .subcategoriaId(p.getSubcategoria() != null ? p.getSubcategoria().getId() : null)
+                .subcategoriaNombre(p.getSubcategoria() != null ? p.getSubcategoria().getNombre() : null)
                 .build();
     }
 }
